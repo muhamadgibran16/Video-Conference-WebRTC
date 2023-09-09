@@ -67,10 +67,10 @@ var AppProcess = (function () {
         video: false,
         audio: true,
       })
-      audio = astream.getAudioTrack()[0]
+      audio = astream.getAudioTracks()[0]
       audio.enabled = false;
     } catch (error) {
-      console.log(error.message);
+      console.log(error);
     }
   }
 
@@ -115,7 +115,10 @@ var AppProcess = (function () {
   async function videoProcess(newVideoState) {
     if (newVideoState == video_states.None) {
       $('#videoCamOnOff').html("<i class='bi bi-camera-video-off-fill'></i>")
-      video_st = newVideoState
+
+      $('#ScreenShareOnOff').html("<i class='bi bi-arrow-up-right-square-fill'></i><div>Present Now</div>")
+
+      video_st = newVideoState;
       removeVideoStream(rtp_vid_senders)
       return
     }
@@ -142,6 +145,10 @@ var AppProcess = (function () {
           // video: true,
           audio: false,
         })
+        vstream.oninactive = (e) => {
+          removeVideoStream(rtp_vid_senders)
+          $('#ScreenShareOnOff').html("<i class='bi bi-arrow-up-right-square-fill'></i><div>Present Now</div>")
+        }
       }
       if (vstream && vstream.getVideoTracks().length > 0) {
         videoCamTrack = vstream.getVideoTracks()[0];
@@ -153,9 +160,17 @@ var AppProcess = (function () {
         }
       }
     } catch (error) {
-      console.log(error.message);
+      console.log(error);
     }
     video_st = newVideoState;
+
+    if (newVideoState == video_states.Camera) {
+      $('#videoCamOnOff').html("<i class='bi bi-camera-video-fill'></i>")
+      $('#ScreenShareOnOff').html("<i class='bi bi-arrow-up-right-square-fill'></i><div>Present Now</div>")
+    } else if (newVideoState == video_states.ScreenShare) {
+      $('#videoCamOnOff').html("<i class='bi bi-camera-video-off-fill'></i>")
+      $('#ScreenShareOnOff').html("<i class='bi bi-arrow-up-right-square-fill text-danger'></i><div class='text-danger'>Stop Present</div>")
+    }
   }
 
   var iceConfiguration = {
@@ -247,8 +262,28 @@ var AppProcess = (function () {
       try {
         await peers_connection[from_connid].addIceCandidate(message.icecandidate)
       } catch (error) {
-        console.log(error.message);
+        console.log(error);
       }
+    }
+  }
+
+  async function closeConnection (connid) {
+    peers_connection_ids[connid] = null;
+    if(peers_connection[connid]) {
+      peers_connection[connid].close();
+      peers_connection[connid] = null;
+    }
+    if(remote_aud_stream[connid]){
+      remote_aud_stream[connid].getTracks().forEach((t) => {
+        if(t.stop) t.stop();
+      })
+      remote_aud_stream[connid] = null;
+    }
+    if(remote_vid_stream[connid]){
+      remote_vid_stream[connid].getTracks().forEach((t) => {
+        if(t.stop) t.stop();
+      })
+      remote_vid_stream[connid] = null;
     }
   }
 
@@ -261,7 +296,10 @@ var AppProcess = (function () {
     },
     processClientFunc: async function (data, from_connid) {
       await SDPProcess(data, from_connid)
-    }
+    },
+    closeConnectionCall: async function (connid) {
+      await closeConnection(connid)
+    },
   }
 })();
 
@@ -300,6 +338,10 @@ var MyApp = (function () {
           })
         }
       }
+    })
+    socket.on('inform_other_about_disconnected_user', function(data) {
+      $('#' + data.connId).remove();
+      AppProcess.closeConnectionCall(data.connId);
     })
     socket.on('inform_others_about_me', function (data) {
       addUser(data.other_user_id, data.connId)

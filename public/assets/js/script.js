@@ -97,7 +97,7 @@ var AppProcess = (function () {
   function removeMediaSenders(rtp_senders) {
     for (var con_id in peers_connection_ids) {
       if (rtp_senders[con_id] && connection_status(peers_connection[con_id])) {
-        peers_connection[con_id].removeTrack(rtpSenders[con_id]);
+        peers_connection[con_id].removeTrack(rtp_senders[con_id]);
         rtp_senders[con_id] = null;
       }
     }
@@ -267,21 +267,21 @@ var AppProcess = (function () {
     }
   }
 
-  async function closeConnection (connid) {
+  async function closeConnection(connid) {
     peers_connection_ids[connid] = null;
-    if(peers_connection[connid]) {
+    if (peers_connection[connid]) {
       peers_connection[connid].close();
       peers_connection[connid] = null;
     }
-    if(remote_aud_stream[connid]){
+    if (remote_aud_stream[connid]) {
       remote_aud_stream[connid].getTracks().forEach((t) => {
-        if(t.stop) t.stop();
+        if (t.stop) t.stop();
       })
       remote_aud_stream[connid] = null;
     }
-    if(remote_vid_stream[connid]){
+    if (remote_vid_stream[connid]) {
       remote_vid_stream[connid].getTracks().forEach((t) => {
-        if(t.stop) t.stop();
+        if (t.stop) t.stop();
       })
       remote_vid_stream[connid] = null;
     }
@@ -315,6 +315,7 @@ var MyApp = (function () {
     $('#me h2').text(user_id + '(Me)');
     document.title = user_id;
     event_process_for_signaling_server()
+    eventHandeling();
   }
 
   function event_process_for_signaling_server() {
@@ -339,25 +340,77 @@ var MyApp = (function () {
         }
       }
     })
-    socket.on('inform_other_about_disconnected_user', function(data) {
+    socket.on('inform_other_about_disconnected_user', function (data) {
       $('#' + data.connId).remove();
       AppProcess.closeConnectionCall(data.connId);
     })
     socket.on('inform_others_about_me', function (data) {
-      addUser(data.other_user_id, data.connId)
-      AppProcess.setNewConnection(data.connId)
-    })
+      addUser(data.other_user_id, data.connId);
+      AppProcess.setNewConnection(data.connId);
+    });
+
+    // socket.on('inform_me_about_other_user', function (other_users) {
+    //   if (other_users) {
+    //     for (var i = 0; i < other_users.length; i++) {
+    //       addUser(other_users[i].user_id, other_users[i].connectionId);
+    //       AppProcess.setNewConnection(other_users[i].connectionId);
+    //     }
+    //   }
+    // });
     socket.on('inform_me_about_other_user', function (other_users) {
       if (other_users) {
         for (var i = 0; i < other_users.length; i++) {
-          addUser(other_users[i].user_id, other_users[i].connectionId);
-          AppProcess.setNewConnection(other_users[i].connectionId);
-
+          // Periksa apakah pengguna sudah ada di layar
+          var existingUser = document.getElementById(other_users[i].connectionId);
+          if (!existingUser) {
+            addUser(other_users[i].user_id, other_users[i].connectionId);
+            AppProcess.setNewConnection(other_users[i].connectionId);
+          }
         }
       }
     })
+    
+    // socket.on('inform_others_about_me', function (data) {
+    //   addUser(data.other_user_id, data.connId)
+    //   AppProcess.setNewConnection(data.connId)
+    // })
+    // socket.on('inform_me_about_other_user', function (other_users) {
+    //   if (other_users) {
+    //     for (var i = 0; i < other_users.length; i++) {
+    //       addUser(other_users[i].user_id, other_users[i].connectionId);
+    //       AppProcess.setNewConnection(other_users[i].connectionId);
+
+    //     }
+    //   }
+    // })
     socket.on('SDPProcess', async function (data) {
       await AppProcess.processClientFunc(data.message, data.from_connid)
+    })
+    socket.on('showChatMessage', function (data) {
+      var time = new Date();
+      var lTime = time.toLocaleString('en-US', {
+        hour: "numeric",
+        minute: "numeric",
+        hour12: true,
+      })
+      var div = $('<div>').html('<span class="fw-bold me-3" style="color: #000;">' + data.from + '</span>' + lTime + '<br>' + data.message)
+      $('#messages').append(div)
+    })
+  }
+
+  function eventHandeling() {
+    $('#btnsend').on('click', function () {
+      var msgData = $('#msgbox').val()
+      socket.emit('sendMessage', msgData);
+      var time = new Date();
+      var lTime = time.toLocaleString('en-US', {
+        hour: "numeric",
+        minute: "numeric",
+        hour12: true,
+      })
+      var div = $('<div>').html('<span class="fw-bold me-3" style="color: #000;">' + user_id + '</span>' + lTime + '<br>' + msgData)
+      $('#messages').append(div)
+      $('#msgbox').val('');
     })
   }
 

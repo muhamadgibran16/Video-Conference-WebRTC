@@ -159,3 +159,31 @@ video {
   margin: 1rem auto;
 }
 
+.active {
+  background-color: teal;
+  color: #fff;
+  border-radius: 5px;
+  -webkit-border-radius: 5px;
+  -moz-border-radius: 5px;
+  -ms-border-radius: 5px;
+  -o-border-radius: 5px;
+}
+
+.top-box {
+  background-color: rgb(14 6 6);
+  position: fixed;
+  width: 30%;
+  height: 30%;
+  top: 20.5%;
+  left: 35.5%;
+  display: block;
+  box-shadow: 0 0 5px white;
+  columns: white;
+  border: 2px solid white;
+  z-index: 999;
+  border-radius: 10px;
+  -webkit-border-radius: 10px;
+  -moz-border-radius: 10px;
+  -ms-border-radius: 10px;
+  -o-border-radius: 10px;
+}

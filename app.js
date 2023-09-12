@@ -22,6 +22,8 @@ io.on('connection', (socket) => {
   //     user_id: data.displayName,
   //     meeting_id: data.meeting_id,
   //   })
+  //   var userCount = userConnections.length;
+  //   console.log(userCount);
   //   other_users.forEach((v) => {
   //     // mengirimkan informasi ke id lain
   //     socket.to(v.connectionId).emit('inform_others_about_me', {
@@ -31,6 +33,7 @@ io.on('connection', (socket) => {
   //   })
   //   socket.emit('inform_me_about_other_user', other_users)
   // })
+  //  -----
   socket.on('userconnect', (data) => {
     console.log('userconnect', data.displayName, data.meeting_id);
 
@@ -42,11 +45,15 @@ io.on('connection', (socket) => {
       meeting_id: data.meeting_id,
     });
 
+    var userCount = userConnections.length;
+    console.log(userCount);
+
     // Perbarui informasi pengguna yang ada kepada pengguna baru.
     other_users.forEach((v) => {
       socket.emit('inform_others_about_me', {
         other_user_id: v.user_id,
         connId: v.connectionId,
+        userNumber: userCount,
       });
     });
 
@@ -91,8 +98,10 @@ io.on('connection', (socket) => {
       userConnections = userConnections.filter((p) => p.connectionId != socket.id);
       var list = userConnections.filter((p) => p.meeting_id == meetingid);
       list.forEach((v) => {
+        var userNumLeft = userConnections.length;
         socket.to(v.connectionId).emit('inform_other_about_disconnected_user', {
           connId: socket.id,
+          uNumber: userNumLeft
         })
       })
     }

@@ -240,32 +240,66 @@ var AppProcess = (function () {
     }), connid)
   }
 
-  async function SDPProcess(message, from_connid) {
-    message = JSON.parse(message)
-    if (message.answer) {
-      await peers_connection[from_connid].setRemoteDescription(new RTCSessionDescription(message.answer))
+  // async function SDPProcess(message, from_connid) {
+  //   message = JSON.parse(message)
+  //   if (message.answer) {
+  //     await peers_connection[from_connid].setRemoteDescription(new RTCSessionDescription(message.answer))
 
+  //   } else if (message.offer) {
+  //     if (!peers_connection[from_connid]) {
+  //       await setConnection(from_connid)
+  //     }
+  //     await peers_connection[from_connid].setRemoteDescription(new RTCSessionDescription(message.offer))
+  //     var answer = await peers_connection[from_connid].createAnswer();
+  //     await peers_connection[from_connid].setLocalDescription(answer);
+  //     serverProcess(JSON.stringify({
+  //       answer: answer, // send data to server
+  //     }), from_connid)
+  //   } else if (message.icecandidate) {
+  //     if (!peers_connection[from_connid]) {
+  //       await setConnection(from_connid)
+  //     }
+  //     try {
+  //       await peers_connection[from_connid].addIceCandidate(message.icecandidate)
+  //     } catch (error) {
+  //       console.log(error);
+  //     }
+  //   }
+  // }
+
+  async function SDPProcess(message, from_connid) {
+    message = JSON.parse(message);
+    if (message.answer) {
+      await peers_connection[from_connid].setRemoteDescription(
+        new RTCSessionDescription(message.answer)
+      );
     } else if (message.offer) {
       if (!peers_connection[from_connid]) {
-        await setConnection(from_connid)
+        await setConnection(from_connid);
       }
-      await peers_connection[from_connid].setRemoteDescription(new RTCSessionDescription(message.offer))
+      await peers_connection[from_connid].setRemoteDescription(
+        new RTCSessionDescription(message.offer)
+      );
       var answer = await peers_connection[from_connid].createAnswer();
       await peers_connection[from_connid].setLocalDescription(answer);
-      serverProcess(JSON.stringify({
-        answer: answer, // send data to server
-      }), from_connid)
+      serverProcess(
+        JSON.stringify({
+          answer: answer,
+        }),
+        from_connid
+      );
     } else if (message.icecandidate) {
       if (!peers_connection[from_connid]) {
-        await setConnection(from_connid)
+        await setConnection(from_connid);
       }
       try {
-        await peers_connection[from_connid].addIceCandidate(message.icecandidate)
+        await peers_connection[from_connid].addIceCandidate(message.icecandidate);
       } catch (error) {
         console.log(error);
       }
     }
   }
+  
 
   async function closeConnection(connid) {
     peers_connection_ids[connid] = null;
@@ -342,10 +376,12 @@ var MyApp = (function () {
     })
     socket.on('inform_other_about_disconnected_user', function (data) {
       $('#' + data.connId).remove();
+      $('.participant-count').text(data.uNumber);
+      $('#participant_' + data.connId + '').remove();
       AppProcess.closeConnectionCall(data.connId);
     })
     socket.on('inform_others_about_me', function (data) {
-      addUser(data.other_user_id, data.connId);
+      addUser(data.other_user_id, data.connId, data.userNumber);
       AppProcess.setNewConnection(data.connId);
     });
 
@@ -358,18 +394,20 @@ var MyApp = (function () {
     //   }
     // });
     socket.on('inform_me_about_other_user', function (other_users) {
+      var userNumber = other_users.length;
+      var userNumb = userNumber + 1;
       if (other_users) {
         for (var i = 0; i < other_users.length; i++) {
           // Periksa apakah pengguna sudah ada di layar
           var existingUser = document.getElementById(other_users[i].connectionId);
           if (!existingUser) {
-            addUser(other_users[i].user_id, other_users[i].connectionId);
+            addUser(other_users[i].user_id, other_users[i].connectionId, userNumb);
             AppProcess.setNewConnection(other_users[i].connectionId);
           }
         }
       }
     })
-    
+
     // socket.on('inform_others_about_me', function (data) {
     //   addUser(data.other_user_id, data.connId)
     //   AppProcess.setNewConnection(data.connId)
@@ -414,7 +452,7 @@ var MyApp = (function () {
     })
   }
 
-  function addUser(other_user_id, connId) {
+  function addUser(other_user_id, connId, userNum) {
     var newDivId = $('#otherTemplate').clone();
     newDivId = newDivId.attr('id', connId).addClass('other')
     newDivId.find('h2').text(other_user_id)
@@ -423,7 +461,58 @@ var MyApp = (function () {
     newDivId.show()
 
     $('#divUsers').append(newDivId)
+    $('.in-call-wrap-up').append('<div class="in-call-wrap d-flex justify-content-between align-items-center mb-3" id="participant_' + connId + '"> <div class="participant-img-name-wrap display-center cursor-pointer"> <div class="participant-img"> <img src="public/assets/img/pngwing.com (12).png" class="border border-secondary" alt="" style="width: 40px; height: 40px; border-radius: 50%;"> </div> <div class="participant-img ms-2">' + other_user_id + '</div> </div> <div class="participant-action-wrap display-center"> <div class="participant-action-wrap-pin display-center me-2 cursor-pointer"> <i class="bi bi-pin"></i> </div> <div class="participant-action-wrap-dot display-center me-2 cursor-pointer"> <i class="bi bi-three-dots-vertical"></i> </div> </div> </div>')
+
+    $(".participant-count").text(userNum)
   }
+
+  $(document).on('click', '.people-heading', function () {
+    $('.in-call-wrap-up').show(300)
+    $('.chat-show-wrap').hide(300)
+    $(this).addClass('active')
+    $('.chat-heading').removeClass('active')
+  })
+  $(document).on('click', '.chat-heading', function () {
+    $('.in-call-wrap-up').hide(300)
+    $('.chat-show-wrap').show(300)
+    $(this).addClass('active')
+    $('.people-heading').removeClass('active')
+  })
+  $(document).on('click', '.meeting-heading-cross', function () {
+    $('.g-right-details-wrap').hide(300)
+  })
+  $(document).on('click', '.top-left-participant-wrap', function () {
+    $('.g-right-details-wrap').show(300)
+    $('.in-call-wrap-up').show(300)
+    $('.chat-show-wrap').hide(300)
+  })
+  $(document).on('click', '.top-left-chat-wrap', function () {
+    $('.g-right-details-wrap').show(300)
+    $('.in-call-wrap-up').hide(300)
+    $('.chat-show-wrap').show(300)
+  })
+  $(document).on('click', '.end-call-wrap', function () {
+    $('.top-box-show').css({
+      "display": "block",
+    }).html(' <div class="top-box align-vertical-middle profile-dialog-show text-center mt-3"> <h1 class="mt-2">Leave Meeting</h1> <div class="call-leave-cancel-action d-flex justify-content-center align-items-center w-100"> <a href="/action.html"><button class="call-leave-action btn btn-danger me-5">Leave</button></a> <button class="call-cancel-action btn btn-secondary">Cancel</button> </div> </div>')
+  })
+  $(document).on('click', '.end-call-wrap', function () {
+    $('.top-box-show').css({
+      "display": "block",
+    }).html(' <div class="top-box align-vertical-middle profile-dialog-show text-center mt-3"> <h1 class="mt-2">Leave Meeting</h1> <div class="call-leave-cancel-action d-flex justify-content-center align-items-center w-100"> <a href="/action.html"><button class="call-leave-action btn btn-danger me-5">Leave</button></a> <button class="call-cancel-action btn btn-secondary">Cancel</button> </div> </div>')
+  })
+  $(document).mouseup(function (e) {
+    var container = new Array()
+    container.push($('.top-box-show'));
+    $.each(container, function (key, value) {
+      if (!$(value).is(e.target) && $(value).has(e.target).length == 0 ) {
+        $(value).empty();
+      }
+    });
+  })
+  $(document).on('click', '.call-cancel-action', function () {
+    $('.top-box-show').html('');
+  })
 
   return {
     _init: function (uid, mid) {

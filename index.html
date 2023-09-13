@@ -107,10 +107,9 @@
         </div>
       </div>
 
-
       <div class="g-top-left bg-light text-secondary w-25 d-flex align-items-center justify-content-between ps-2">
         <div class="top-left-participant-wrap pt-2 curosr-pointer">
-          <div class="top-left-participant-icon">
+          <div class="top-left-participant-icon" style="width: 25px; height: 25px;">
             <i class="bi bi-people-fill"></i>
           </div>
           <div class="top-left-participant-count participant-count text-dark"></div>
@@ -123,6 +122,28 @@
     </div>
     <div class="g-bottom bg-secondary m-0 d-flex justify-content-between align-items-center">
       <div class="bottom-left d-flex" style="height: 10vh;">
+        <div class="g-details border border-success mb-2">
+          <div class="g-details-heading d-flex justify-content-between align-items-center border-bottom">
+            <div class="g-details-heading-detail d-flex align-items-center cursor-pointer">
+              <i class="bi bi-exclamation-circle-fill me-2"></i>Details
+            </div>
+            <div class="g-details-heading-attachment d-flex align-items-center cursor-pointer">
+              <i class="bi bi-paperclip me-2"></i>Attachment
+            </div>
+          </div>
+          <div class="g-details-heading-show-wrap">
+            <div class="g-details-heading-show">
+              <div style="font-weight: 600; color: gray;">Joining Info</div>
+              <div class="meeting_url text-secondary" style="padding: 5px 0;" data-toggle="tooltip"
+                data-placement="top"></div>
+              <div style="cursor: pointer;">
+                <i class="bi bi-clipboard" style="font-size: 14px;"></i>
+                <span class="copy_info fw-bold">Copy Joining Info 
+                  <span class="link-conf fw-bold p-1 text-secondary" style="display: none; background-color: aquamarine; border-radius: 5px;">Link Copied</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="display-center cursor-pointer meeting-details-button">
           Meeting Details<i class="bi bi-caret-down-fill"></i>
         </div>

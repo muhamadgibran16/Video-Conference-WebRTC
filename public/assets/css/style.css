@@ -195,7 +195,7 @@ video {
 
 .g-details {
   position: absolute;
-  width: 25vw;
+  width: 30vw;
   background-color: #fff;
   margin-top: -150px;
   counter-reset: #000;

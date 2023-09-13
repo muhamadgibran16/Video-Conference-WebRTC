@@ -299,7 +299,7 @@ var AppProcess = (function () {
       }
     }
   }
-  
+
 
   async function closeConnection(connid) {
     peers_connection_ids[connid] = null;
@@ -385,6 +385,17 @@ var MyApp = (function () {
       AppProcess.setNewConnection(data.connId);
     });
 
+    socket.on('showFileMesssage', function (data) {
+      var time = new Date()
+      var lTime = time.toLocalString('en-US', {
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: true,
+      })
+      var attachFileAreaForOther = document.querySelector('.show-attach-file')
+      attachFileAreaForOther.innerHTML += '<div class="left-align" style="display: flex; align-items: center;"><img src="public/assets/img/pngwing.com (12).png" style="height: 40px; width: 40px;" class="caller-image circle"/><div style="font-weight: 600; margin: 0 5px;">' + data.username + '</div>:<div><a style="color: #007bff;" href="' + data.filePath + '" download>' + data.fileName + '</a></div></div><br>'
+    })
+
     // socket.on('inform_me_about_other_user', function (other_users) {
     //   if (other_users) {
     //     for (var i = 0; i < other_users.length; i++) {
@@ -452,6 +463,11 @@ var MyApp = (function () {
     })
     var url = window.location.href;
     $('.meeting_url').text(url)
+
+    $('#divUsers').on('dblclick', 'video', function () {
+      this.requestFullScreen();
+    })
+
   }
 
   function addUser(other_user_id, connId, userNum) {
@@ -484,11 +500,15 @@ var MyApp = (function () {
     $('.g-right-details-wrap').hide(300)
   })
   $(document).on('click', '.top-left-participant-wrap', function () {
+    $('.people-heading').addClass('active')
+    $('.chat-heading').removeClass('active')
     $('.g-right-details-wrap').show(300)
     $('.in-call-wrap-up').show(300)
     $('.chat-show-wrap').hide(300)
   })
   $(document).on('click', '.top-left-chat-wrap', function () {
+    $('.people-heading').removeClass('active')
+    $('.chat-heading').addClass('active')
     $('.g-right-details-wrap').show(300)
     $('.in-call-wrap-up').hide(300)
     $('.chat-show-wrap').show(300)
@@ -507,8 +527,18 @@ var MyApp = (function () {
     var container = new Array()
     container.push($('.top-box-show'));
     $.each(container, function (key, value) {
-      if (!$(value).is(e.target) && $(value).has(e.target).length == 0 ) {
+      if (!$(value).is(e.target) && $(value).has(e.target).length == 0) {
         $(value).empty();
+      }
+    });
+  })
+  $(document).mouseup(function (e) {
+    var container = new Array()
+    container.push($('.g-details'));
+    container.push($('.g-right-details-wrap'));
+    $.each(container, function (key, value) {
+      if (!$(value).is(e.target) && $(value).has(e.target).length == 0) {
+        $(value).hide(300);
       }
     });
   })
@@ -526,6 +556,60 @@ var MyApp = (function () {
     setTimeout(function () {
       $('.link-conf').hide()
     }, 3000)
+  })
+  $(document).on('click', '.meeting-details-button', function () {
+    $('.g-details').slideToggle(300)
+  })
+  $(document).on('click', '.g-details-heading-attachment', function () {
+    $('.g-details-heading-show').hide()
+    $('.g-details-heading-show-attachment').show()
+    $(this).addClass('active')
+    $('.g-details-heading-detail').removeClass('active')
+  })
+  $(document).on('click', '.g-details-heading-detail', function () {
+    $('.g-details-heading-show').show()
+    $('.g-details-heading-show-attachment').hide()
+    $(this).addClass('active')
+    $('.g-details-heading-attachment').removeClass('active')
+  })
+  var base_url = window.location.origin
+  $(document).on('change', '.custom-file-input', function () {
+    var filename = $(this).val().split('\\').pop()
+    $(this).siblings('.custom-file-label').addClass('selected').html(filename)
+  })
+  $(document).on('click', '.share-attach', function (e) {
+    e.preventDefault()
+    var att_img = $('#customFile').prop('files')[0]
+    var formData = new FormData()
+    formData.append('zipfile', att_img)
+    formData.append('meeting_id', meeting_id)
+    formData.append('username', user_id)
+    console.log(formData);
+    $.ajax({
+      url: base_url + '/attachimg',
+      type: 'POST',
+      data: formData,
+      contentType: false,
+      processData: false,
+      success: function (response) {
+        console.log(response);
+      },
+      error: function () {
+        console.log('error');
+      }
+    })
+
+    var attachFileArea = documet.querySelector('.show-attach-file')
+    var attachFileName = $('#customFile').val().split('\\').pop()
+    var attachFilePath = 'public/attachment/' + meeting_id + '/' + attachFileName
+    attachFileArea.innerHTML += '<div class="left-align" style="display: flex; align-items: center;"><img src="public/assets/img/pngwing.com (12).png" style="height: 40px; width: 40px;" class="caller-image circle"/><div style="font-weight: 600; margin: 0 5px;">' + user_id + '</div>:<div><a style="color: #007bff;" href="' + attachFilePath + '" download>' + attachFileName + '</a></div></div><br>'
+    $('label.custom-file-label').text('')
+    socket.emit('fileTransferToOther', {
+      username: user_id,
+      meetingid: meeting_id,
+      filePath: attachFilePath,
+      fileName: attachFileName,
+    })
   })
 
   return {

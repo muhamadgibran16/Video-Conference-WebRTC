@@ -1,10 +1,12 @@
 const express = require('express')
 const path = require('path')
+const fs = require('fs')
+const fileUpload = require('express-fileupload')
 var app = express()
 const server = require('http').createServer(app)
 // var server = app.listen(process.env.PORT || 3000)
 const io = require('socket.io')(server, {
-  allowEIO3: true,
+  allowEIO3: true, // false by default
 })
 var userConnections = [];
 
@@ -90,6 +92,25 @@ io.on('connection', (socket) => {
     }
   })
 
+  socket.on('fileTransferToOther', (msg) => {
+    console.log(msg);
+    var mUser = userConnections.find((p) => p.connectionId == socket.id)
+    if (mUser) {
+      var meetingid = mUser.meeting_id
+      var from = mUser.user_id;
+      var list = userConnections.filter((p) => p.meeting_id == meetingid)
+      list.forEach((v) => {
+        socket.to(v.connectionId).emit('showFileMessage', {
+          username: msg.username,
+          meetingid: msg.meetingid,
+          filePath: msg.filePath,
+          fileName: msg.fileName,
+        })
+      })
+    }
+  })
+
+
   socket.on('disconnect', function () {
     console.log('Disconnected');
     var disUser = userConnections.find((p) => p.connectionId == socket.id);
@@ -107,6 +128,56 @@ io.on('connection', (socket) => {
     }
   })
 })
+
+app.use(fileUpload())
+
+// app.post('/attachimg', function (req, res) {
+//   var data = req.body
+//   var imageFile = req.files.zipfile
+//   console.log(imageFile);
+//   var dir = 'public/attachment/' + data.meeting_id + '/'
+//   if (!fs.existsSync(dir)) {
+//     fs.mkdirSync(dir)
+//   }
+//   imageFile.mv('public/attachment/' + data.meeting_id + '/' + imageFile.name, function (err) {
+//     if (err) {
+//       console.log('Could not create upload the image file, error => ', err);
+//       throw new Error
+//     } else {
+//       console.log('Image file created successfully');
+//     }
+//   })
+// })
+
+app.post('/attachimg', function (req, res) {
+  try {
+    var data = req.body
+    var imageFile = req.files.zipfile
+    console.log(imageFile);
+
+    if (!req.files || !req.files.zipfile) {
+      return res.status(400).send('No File Uploaded');
+    }
+
+    var dir = 'public/attachment/' + data.meeting_id + '/'
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir)
+    }
+    imageFile.mv('public/attachment/' + data.meeting_id + '/' + imageFile.name, function (err) {
+      if (err) {
+        console.log('Could not create upload the image file, error => ', err);
+        res.status(500).send('Could not upload the image file');
+      } else {
+        console.log('Image file created successfully');
+        res.send('Image file uploaded successfully');
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Internal server error');
+  }
+});
+
 
 
 const port = process.env.PORT || 3000

@@ -612,22 +612,83 @@ var MyApp = (function () {
     })
   })
 
+  // $(document).on('click', '.option-icon', function () {
+  //   $('.recording-show').toggle(300)
+  // })
+
+  // $(document).on('click', '.start-record', function () {
+  //   $(this).removeClass().addClass('stop-record btn-danger text-dark').text('Stop Recording')
+  //   startRecording()
+  // })
+  // $(document).on('click', '.stop-record', function () {
+  //   $(this).removeClass().addClass('start-record btn-dark text-danger').text('Start Recording')
+  //   medaiRecorder.stop()
+  // })
+
+  // var medaiRecorder;
+  // var chunks = []
+
+  // async function captureScreen(mediaConstraints = {
+  //   video: true
+  // }) {
+  //   const screenStream = await navigator.mediaDevices.getDisplayMedia(mediaConstraints)
+  //   return screenStream;
+  // }
+  // async function captureAudio(mediaConstraints = {
+  //   video: false,
+  //   audio: true
+  // }) {
+  //   const audioStream = await navigator.mediaDevices.getUserMedia(mediaConstraints)
+  //   return audioStream;
+  // }
+  // async function startRecording() {
+  //   const screenStream = await captureScreen()
+  //   const audioStream = await captureAudio()
+  //   const stream = new MediaStream([...screenStream.getTracks(), ...audioStream.getTracks()])
+
+  //   medaiRecorder = new MediaRecorder(stream)
+  //   medaiRecorder.start()
+  //   medaiRecorder.onstop = function (e) {
+  //     var clipName = prompt('Enter a name for your recording')
+  //     stream.getTracks().forEach((track) => track.stop())
+  //     const blob = new Blob(chunks, {
+  //       type: 'video/webm'
+  //     })
+  //     const url = window.URL.createObjectURL(blob)
+  //     const a = document.createElement('a')
+  //     a.style.display = 'none'
+  //     a.href = url;
+  //     a.download = clipName + '.webm'
+  //     document.body.appendChild(a)
+  //     a.click();
+  //     setTimeout(() => {
+  //       document.body.removeChild(a)
+  //       window.URL.revokeObjectURL(url)
+  //     }, 100)
+  //   }
+  //   medaiRecorder.ondataavailable = function (e) {
+  //     chunks.push(e.data)
+  //   }
+  // }
+
   $(document).on('click', '.option-icon', function () {
     $('.recording-show').toggle(300)
   })
-
+  
   $(document).on('click', '.start-record', function () {
     $(this).removeClass().addClass('stop-record btn-danger text-dark').text('Stop Recording')
     startRecording()
   })
   $(document).on('click', '.stop-record', function () {
     $(this).removeClass().addClass('start-record btn-dark text-danger').text('Start Recording')
-    medaiRecorder.stop()
+    stopRecording()
   })
-
-  var medaiRecorder;
-  var chunks = []
-
+  
+  var audioRecorder;
+  var videoRecorder;
+  var audioChunks = [];
+  var videoChunks = [];
+  
   async function captureScreen(mediaConstraints = {
     video: true
   }) {
@@ -644,32 +705,64 @@ var MyApp = (function () {
   async function startRecording() {
     const screenStream = await captureScreen()
     const audioStream = await captureAudio()
-    const stream = new MediaStream([...screenStream.getTracks(), ...audioStream.getTracks()])
-
-    medaiRecorder = new MediaRecorder(stream)
-    medaiRecorder.start()
-    medaiRecorder.onstop = function (e) {
-      var clipName = prompt('Enter a name for your recording')
-      stream.getTracks().forEach((track) => track.stop())
-      const blob = new Blob(chunks, {
-        type: 'video/webm'
-      })
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.style.display = 'none'
-      a.href = url;
-      a.download = clipName + '.webm'
-      document.body.appendChild(a)
-      a.click();
-      setTimeout(() => {
-        document.body.removeChild(a)
-        window.URL.revokeObjectURL(url)
-      }, 100)
+  
+    audioRecorder = new MediaRecorder(audioStream)
+    videoRecorder = new MediaRecorder(screenStream)
+  
+    audioRecorder.ondataavailable = function (e) {
+      audioChunks.push(e.data)
     }
-    medaiRecorder.ondataavailable = function (e) {
-      chunks.push(e.data)
+  
+    videoRecorder.ondataavailable = function (e) {
+      videoChunks.push(e.data)
     }
+  
+    audioRecorder.start()
+    videoRecorder.start()
   }
+  function stopRecording() {
+    audioRecorder.stop()
+    videoRecorder.stop()
+  
+    var clipName = prompt('Enter a name for your recording')
+  
+    const audioBlob = new Blob(audioChunks, {
+      type: 'audio/wav' // Mengganti tipe file menjadi audio/wav
+    })
+    const audioUrl = window.URL.createObjectURL(audioBlob)
+    const audioA = document.createElement('a')
+    audioA.style.display = 'none'
+    audioA.href = audioUrl
+    audioA.download = clipName + '_audio.wav' // Mengganti ekstensi menjadi .wav
+    document.body.appendChild(audioA)
+    audioA.click()
+    setTimeout(() => {
+      document.body.removeChild(audioA)
+      window.URL.revokeObjectURL(audioUrl)
+    }, 100)
+  
+    const videoBlob = new Blob(videoChunks, {
+      type: 'video/webm'
+    })
+    const videoUrl = window.URL.createObjectURL(videoBlob)
+    const videoA = document.createElement('a')
+    videoA.style.display = 'none'
+    videoA.href = videoUrl
+    videoA.download = clipName + '_video.webm'
+    document.body.appendChild(videoA)
+    videoA.click()
+    setTimeout(() => {
+      document.body.removeChild(videoA)
+      window.URL.revokeObjectURL(videoUrl)
+    }, 100)
+  
+    audioChunks = [];
+    videoChunks = [];
+  }
+  
+  
+  
+
 
   return {
     _init: function (uid, mid) {

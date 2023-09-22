@@ -300,38 +300,10 @@ var AppProcess = (function () {
     }
   }
 
-  // Fungsi untuk merekam audio dari peserta berdasarkan timestamp
-  async function recordAudioFromParticipant(connectionId) {
-    try {
-      var audioStream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-      });
-
-      audioStream.addEventListener('dataavailable', async function (event) {
-        if (event.data.size > 0) {
-          // Kirim data audio ke server dengan timestamp
-          var timestamp = Date.now();
-          serverProcess(JSON.stringify({
-            audioData: event.data,
-            timestamp: timestamp,
-          }), connectionId);
-        }
-      });
-
-      // Mulai merekam audio
-      var mediaRecorder = new MediaRecorder(audioStream);
-      mediaRecorder.start();
-    } catch (error) {
-      console.error('Gagal merekam audio:', error);
-    }
-  }
-
-  // ..
-
   return {
-    startRecordingAudio: async function (connectionId) {
-      await recordAudioFromParticipant(connectionId);
-    },
+    // startRecordingAudio: async function (connectionId) {
+    //   await recordAudioFromParticipant(connectionId);
+    // },
     init: async function (SDP_function, my_connid) {
       await _init(SDP_function, my_connid);
     },
@@ -619,158 +591,116 @@ var MyApp = (function () {
   })
 
   var audioRecorder;
-  var videoRecorder;
   var audioChunks = [];
-  var videoChunks = [];
+  var isRecording = false;
+  var startTime = null;
+  var currentSpeaker = null;
 
-  async function captureScreen(mediaConstraints = {
-    video: true
-  }) {
-    const screenStream = await navigator.mediaDevices.getDisplayMedia(mediaConstraints)
-    return screenStream;
-  }
-  async function captureAudio(mediaConstraints = {
-    video: false,
-    audio: true
-  }) {
-    const audioStream = await navigator.mediaDevices.getUserMedia(mediaConstraints)
-    return audioStream;
-  }
+  // async function captureAudio(mediaConstraints = {
+  //   video: false,
+  //   audio: true
+  // }) {
+  //   const audioStream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
+  //   return audioStream;
+  // }
+
   async function startRecording() {
-    const screenStream = await captureScreen()
-    const audioStream = await captureAudio()
+    let stream = await navigator.mediaDevices.getUserMedia({
+      video: true,
+      audio: true
+    });
+    let recorder = new RecordRTCPromisesHandler(stream, {
+      type: 'video'
+    });
+    recorder.startRecording();
 
-    audioRecorder = new MediaRecorder(audioStream)
-    videoRecorder = new MediaRecorder(screenStream)
+    const sleep = m => new Promise(r => setTimeout(r, m));
+    await sleep(3000);
 
-    audioRecorder.ondataavailable = function (e) {
-      audioChunks.push(e.data)
-    }
+    await recorder.stopRecording();
+    let blob = await recorder.getBlob();
+    invokeSaveAsDialog(blob);
 
-    videoRecorder.ondataavailable = function (e) {
-      videoChunks.push(e.data)
-    }
+    // const audioStream = await captureAudio();
+    // console.log('Audio stream obtained:', audioStream);
 
-    audioRecorder.start()
-    videoRecorder.start()
+    // audioRecorder = new RecordRTC(audioStream);
+
+    // audioRecorder.ondataavailable = function (e) {
+    //   if (isRecording) {
+    //     audioChunks.push(e.data);
+    //   }
+    // }
+    // // detectSpeakerChange()
+    // audioRecorder.onstart = function () {
+    //   isRecording = true;
+    //   startTime = new Date().getTime();
+    //   currentSpeaker = null;
+    // }
+    // audioRecorder.onstop = function () {
+    //   isRecording = false;
+    //   console.log('Recording stopped');
+    // }
+
+    // audioRecorder.onerror = function (error) {
+    //   console.error('Recording error:', error);
+    // }
+    // audioRecorder.start();
+    // console.log('Audio Recording ... => ', audioRecorder);
   }
 
-  function stopRecording() {
-    audioRecorder.stop()
-    videoRecorder.stop()
+  // function stopRecording() {
+  //   if (audioRecorder && isRecording) {
+  //     audioRecorder.stop();
+  //     isRecording = false;
 
-    var clipName = prompt('Enter a name for your recording')
+  //     const endTime = new Date().getTime();
+  //     const duration = (endTime - startTime) / 1000; // Durasi rekaman dalam detik
 
-    const audioBlob = new Blob(audioChunks, {
-      type: 'audio/wav' // Mengganti tipe file menjadi audio/wav
-    })
-    const audioUrl = window.URL.createObjectURL(audioBlob)
-    const audioA = document.createElement('a')
-    audioA.style.display = 'none'
-    audioA.href = audioUrl
-    audioA.download = clipName + '_audio.wav' // Mengganti ekstensi menjadi .wav
-    document.body.appendChild(audioA)
-    audioA.click()
-    setTimeout(() => {
-      document.body.removeChild(audioA)
-      window.URL.revokeObjectURL(audioUrl)
-    }, 100)
+  //     console.log('test');
+  //     if (audioChunks.length > 0) {
+  //       // Membuat Blob audio
+  //       const audioBlob = new Blob(audioChunks, {
+  //         type: 'audio/wav'
+  //       });
+  //       console.log('Audio recording completed.')
 
-    const videoBlob = new Blob(videoChunks, {
-      type: 'video/webm'
-    })
-    const videoUrl = window.URL.createObjectURL(videoBlob)
-    const videoA = document.createElement('a')
-    videoA.style.display = 'none'
-    videoA.href = videoUrl
-    videoA.download = clipName + '_video.webm'
-    document.body.appendChild(videoA)
-    videoA.click()
-    setTimeout(() => {
-      document.body.removeChild(videoA)
-      window.URL.revokeObjectURL(videoUrl)
-    }, 100)
+  //       // Crearte Clipname based on timestamp
+  //       const timestamp = new Date().toISOString().replace(/:/g, '-');
+  //       const clipName = `audio_${timestamp}_speaker_${currentSpeaker || 'unknown'}_${duration.toFixed(1)}s.wav`;
+  //       console.log('clipName:', clipName);
 
-    audioChunks = [];
-    videoChunks = [];
-  }
-  var audioRecorder;
-  var videoRecorder;
-  var audioChunks = [];
-  var videoChunks = [];
+  //       // Create audio URL
+  //       const audioUrl = window.URL.createObjectURL(audioBlob);
+  //       console.log('Audio URL:', audioUrl);
 
-  async function captureScreen(mediaConstraints = {
-    video: true
-  }) {
-    const screenStream = await navigator.mediaDevices.getDisplayMedia(mediaConstraints)
-    return screenStream;
-  }
-  async function captureAudio(mediaConstraints = {
-    video: false,
-    audio: true
-  }) {
-    const audioStream = await navigator.mediaDevices.getUserMedia(mediaConstraints)
-    return audioStream;
-  }
-  async function startRecording() {
-    const screenStream = await captureScreen()
-    const audioStream = await captureAudio()
+  //       // Create Element for downloading video
+  //       const audioA = document.createElement('a');
+  //       audioA.style.display = 'none';
+  //       audioA.href = audioUrl;
+  //       console.log('audioA:', audioA);
+  //       audioA.download = clipName;
+  //       document.body.appendChild(audioA);
+  //       audioA.click();
 
-    audioRecorder = new MediaRecorder(audioStream)
-    videoRecorder = new MediaRecorder(screenStream)
+  //       // Membersihkan audioChunks dan melepaskan URL audio
+  //       audioChunks = [];
+  //       window.URL.revokeObjectURL(audioUrl);
+  //       console.log('Audio recording completed.', audioChunks);
+  //     }
+  //   }
+  // }
 
-    audioRecorder.ondataavailable = function (e) {
-      audioChunks.push(e.data)
-    }
-
-    videoRecorder.ondataavailable = function (e) {
-      videoChunks.push(e.data)
-    }
-
-    audioRecorder.start()
-    videoRecorder.start()
-  }
-
-  function stopRecording() {
-    audioRecorder.stop()
-    videoRecorder.stop()
-
-    var clipName = prompt('Enter a name for your recording')
-
-    const audioBlob = new Blob(audioChunks, {
-      type: 'audio/wav' // Mengganti tipe file menjadi audio/wav
-    })
-    const audioUrl = window.URL.createObjectURL(audioBlob)
-    const audioA = document.createElement('a')
-    audioA.style.display = 'none'
-    audioA.href = audioUrl
-    audioA.download = clipName + '_audio.wav' // Mengganti ekstensi menjadi .wav
-    document.body.appendChild(audioA)
-    audioA.click()
-    setTimeout(() => {
-      document.body.removeChild(audioA)
-      window.URL.revokeObjectURL(audioUrl)
-    }, 100)
-
-    const videoBlob = new Blob(videoChunks, {
-      type: 'video/webm'
-    })
-    const videoUrl = window.URL.createObjectURL(videoBlob)
-    const videoA = document.createElement('a')
-    videoA.style.display = 'none'
-    videoA.href = videoUrl
-    videoA.download = clipName + '_video.webm'
-    document.body.appendChild(videoA)
-    videoA.click()
-    setTimeout(() => {
-      document.body.removeChild(videoA)
-      window.URL.revokeObjectURL(videoUrl)
-    }, 100)
-
-    audioChunks = [];
-    videoChunks = [];
-  }
-
+  // Mendengarkan perubahan suara (misalnya, pengguna baru berbicara)
+  // Anda perlu menentukan algoritma atau sumber lain untuk mendeteksi perubahan pembicara
+  // function detectSpeakerChange(newSpeaker) {
+  //   if (newSpeaker !== currentSpeaker) {
+  //     stopRecording(); // Menghentikan rekaman pembicara sebelumnya
+  //     currentSpeaker = newSpeaker;
+  //     startRecording(); // Memulai rekaman baru untuk pembicara baru
+  //     console.log('Speaker change detected:', newSpeaker);
+  //   }
+  // }
 
   return {
     _init: function (uid, mid) {

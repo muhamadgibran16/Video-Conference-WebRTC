@@ -15,7 +15,7 @@ app.use(express.static(path.join(__dirname, ''))); // root directory static file
 // Event listener untuk koneksi socket baru
 io.on('connection', (socket) => {
   console.log('Socket id is', socket.id);
-
+  
   socket.on('userconnect', (data) => {
     console.log('userconnect', data.displayName, data.meeting_id);
 
@@ -109,6 +109,24 @@ io.on('connection', (socket) => {
 })
 
 app.use(fileUpload())
+
+// app.post('/attachimg', function (req, res) {
+//   var data = req.body
+//   var imageFile = req.files.zipfile
+//   console.log(imageFile);
+//   var dir = 'public/attachment/' + data.meeting_id + '/'
+//   if (!fs.existsSync(dir)) {
+//     fs.mkdirSync(dir)
+//   }
+//   imageFile.mv('public/attachment/' + data.meeting_id + '/' + imageFile.name, function (err) {
+//     if (err) {
+//       console.log('Could not create upload the image file, error => ', err);
+//       throw new Error
+//     } else {
+//       console.log('Image file created successfully');
+//     }
+//   })
+// })
 
 app.post('/attachimg', function (req, res) {
   try {
@@ -215,7 +233,7 @@ app.post('/downloadRecording', function (req, res) {
 
 
 
-const port = process.env.PORT || 3000
+const port = process.env.PORT || 8080
 server.listen(port, () => {
   console.log(`Express server listening on port ${port}`)
 })

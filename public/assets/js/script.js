@@ -301,9 +301,7 @@ var AppProcess = (function () {
   }
 
   return {
-    // startRecordingAudio: async function (connectionId) {
-    //   await recordAudioFromParticipant(connectionId);
-    // },
+
     init: async function (SDP_function, my_connid) {
       await _init(SDP_function, my_connid);
     },
@@ -316,7 +314,12 @@ var AppProcess = (function () {
     processClientFunc: async function (data, from_connid) {
       await SDPProcess(data, from_connid);
     },
-    // setNewConnection: setNewConnection, 
+    // startRecordingAudio: async function (connid) {
+    //   await startRecording(connid);
+    // },
+    // stopRecordingAudio: async function (connid) {
+    //   stopRecording(connid);
+    // },
   };
 })();
 
@@ -590,117 +593,50 @@ var MyApp = (function () {
     stopRecording()
   })
 
-  var audioRecorder;
-  var audioChunks = [];
-  var isRecording = false;
-  var startTime = null;
-  var currentSpeaker = null;
-
-  // async function captureAudio(mediaConstraints = {
-  //   video: false,
-  //   audio: true
-  // }) {
-  //   const audioStream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
-  //   return audioStream;
-  // }
 
   async function startRecording() {
-    let stream = await navigator.mediaDevices.getUserMedia({
-      video: true,
-      audio: true
-    });
-    let recorder = new RecordRTCPromisesHandler(stream, {
-      type: 'video'
-    });
-    recorder.startRecording();
+    const screenStream = await captureScreen()
+    const audioStream = await captureAudio()
 
-    const sleep = m => new Promise(r => setTimeout(r, m));
-    await sleep(3000);
+    audioRecorder = new MediaRecorder(audioStream)
+    videoRecorder = new MediaRecorder(screenStream)
 
-    await recorder.stopRecording();
-    let blob = await recorder.getBlob();
-    invokeSaveAsDialog(blob);
+    audioRecorder.ondataavailable = function (e) {
+      audioChunks.push(e.data)
+    }
 
-    // const audioStream = await captureAudio();
-    // console.log('Audio stream obtained:', audioStream);
+    videoRecorder.ondataavailable = function (e) {
+      videoChunks.push(e.data)
+    }
 
-    // audioRecorder = new RecordRTC(audioStream);
-
-    // audioRecorder.ondataavailable = function (e) {
-    //   if (isRecording) {
-    //     audioChunks.push(e.data);
-    //   }
-    // }
-    // // detectSpeakerChange()
-    // audioRecorder.onstart = function () {
-    //   isRecording = true;
-    //   startTime = new Date().getTime();
-    //   currentSpeaker = null;
-    // }
-    // audioRecorder.onstop = function () {
-    //   isRecording = false;
-    //   console.log('Recording stopped');
-    // }
-
-    // audioRecorder.onerror = function (error) {
-    //   console.error('Recording error:', error);
-    // }
-    // audioRecorder.start();
-    // console.log('Audio Recording ... => ', audioRecorder);
+    audioRecorder.start()
+    videoRecorder.start()
   }
 
-  // function stopRecording() {
-  //   if (audioRecorder && isRecording) {
-  //     audioRecorder.stop();
-  //     isRecording = false;
+  function stopRecording() {
+    audioRecorder.stop()
 
-  //     const endTime = new Date().getTime();
-  //     const duration = (endTime - startTime) / 1000; // Durasi rekaman dalam detik
+    var clipName = prompt('Enter a name for your recording')
 
-  //     console.log('test');
-  //     if (audioChunks.length > 0) {
-  //       // Membuat Blob audio
-  //       const audioBlob = new Blob(audioChunks, {
-  //         type: 'audio/wav'
-  //       });
-  //       console.log('Audio recording completed.')
+    const audioBlob = new Blob(audioChunks, {
+      type: 'audio/wav' // Mengganti tipe file menjadi audio/wav
+    })
+    const audioUrl = window.URL.createObjectURL(audioBlob)
+    const audioA = document.createElement('a')
+    audioA.style.display = 'none'
+    audioA.href = audioUrl
+    timestamp = new Date()
+    audioA.download = clipName + timestamp + '_audio.wav' // Mengganti ekstensi menjadi .wav
+    document.body.appendChild(audioA)
+    audioA.click()
+    setTimeout(() => {
+      document.body.removeChild(audioA)
+      window.URL.revokeObjectURL(audioUrl)
+    }, 100)
+    
+    audioChunks = [];
+  }
 
-  //       // Crearte Clipname based on timestamp
-  //       const timestamp = new Date().toISOString().replace(/:/g, '-');
-  //       const clipName = `audio_${timestamp}_speaker_${currentSpeaker || 'unknown'}_${duration.toFixed(1)}s.wav`;
-  //       console.log('clipName:', clipName);
-
-  //       // Create audio URL
-  //       const audioUrl = window.URL.createObjectURL(audioBlob);
-  //       console.log('Audio URL:', audioUrl);
-
-  //       // Create Element for downloading video
-  //       const audioA = document.createElement('a');
-  //       audioA.style.display = 'none';
-  //       audioA.href = audioUrl;
-  //       console.log('audioA:', audioA);
-  //       audioA.download = clipName;
-  //       document.body.appendChild(audioA);
-  //       audioA.click();
-
-  //       // Membersihkan audioChunks dan melepaskan URL audio
-  //       audioChunks = [];
-  //       window.URL.revokeObjectURL(audioUrl);
-  //       console.log('Audio recording completed.', audioChunks);
-  //     }
-  //   }
-  // }
-
-  // Mendengarkan perubahan suara (misalnya, pengguna baru berbicara)
-  // Anda perlu menentukan algoritma atau sumber lain untuk mendeteksi perubahan pembicara
-  // function detectSpeakerChange(newSpeaker) {
-  //   if (newSpeaker !== currentSpeaker) {
-  //     stopRecording(); // Menghentikan rekaman pembicara sebelumnya
-  //     currentSpeaker = newSpeaker;
-  //     startRecording(); // Memulai rekaman baru untuk pembicara baru
-  //     console.log('Speaker change detected:', newSpeaker);
-  //   }
-  // }
 
   return {
     _init: function (uid, mid) {
